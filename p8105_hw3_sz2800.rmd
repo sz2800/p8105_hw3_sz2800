@@ -1,0 +1,70 @@
+---
+title: "p8105_hw3_sz2800.Rmd"
+author: "Stephanie Zhen"
+date: "10/8/2019"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library (tidyverse)
+library (viridis)
+library (p8105.datasets)
+```
+
+## Q1: Instacart
+How many aisles are there, and which aisles are the most items ordered from?
+```{r}
+data("instacart")
+
+count = instacart %>%
+  group_by(aisle)%>% 
+  summarize(aisle_count = n()) %>% 
+  arrange(desc(aisle_count))
+```
+Based on the instacart data, there are 134 types of aisles with "fresh vegetable" being the most popular aisles with a 150609 aisles. 
+
+Make a plot that shows the number of items ordered in each aisle, limiting this to aisles with more than 10000 items ordered. Arrange aisles sensibly, and organize your plot so others can read it.
+```{r}
+items_aisles = count %>% 
+  filter(aisle_count > 10000)
+
+items_aisles_plot = ggplot(data = items_aisles, aes(x = reorder(aisle, aisle_count), y = aisle_count)) +
+  geom_bar(stat = "identity") + 
+  labs(x = "Aisle", y = "Number of Times", title = "Distribution of Aisle") +
+  coord_flip() 
+```
+
+Make a table showing the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”. Include the number of times each item is ordered in your table.
+```{r}
+aisles_tables = instacart %>% 
+  select(aisle, product_name) %>% 
+  filter(aisle == c("baking ingredients", "dog food care", "packaged vegetables fruits")) %>% 
+  group_by(aisle, product_name) %>% 
+  summarize(pop_count = n()) %>% 
+  top_n(3)
+```
+
+Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week; format this table for human readers (i.e. produce a 2 x 7 table)
+```{r}
+sweets = instacart %>% 
+  select(product_name, order_dow, order_hour_of_day) %>% 
+  filter(product_name == c("Pink Lady Apples", "Coffee Ice Cream")) %>%
+  group_by (product_name, order_dow) %>% 
+  summarize(mean_time = mean(order_hour_of_day)) %>%
+  pivot_wider(
+    names_from = order_dow,
+    values_from = mean_time
+  )
+```
+
+## Q2 BRFSS
+
+```{r}
+brfss = data(brfss_smart2010)
+```
+
+
