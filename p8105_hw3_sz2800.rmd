@@ -89,13 +89,16 @@ state_loca_02 = brfss %>%
   group_by (locationabbr) %>% 
   summarize(distinct_loca = n_distinct(locationdesc)) %>%
   filter (distinct_loca >= 7) 
+knitr::kable(state_loca_02, digits = 1)
 
 state_loca_10 = brfss %>% 
   filter (year == 2010) %>% 
   group_by (locationabbr) %>% 
   summarize(distinct_loca = n_distinct(locationdesc)) %>%
   filter (distinct_loca >= 7) 
+knitr::kable(state_loca_10, digits = 1)
 ```
+
 The states that were observed at 7 or more locations are: `r pull(state_loca_02,locationabbr)`. The states that are observed at 7 or more locations at 2010 are:  `r pull(state_loca_10,locationabbr)`.
 
 Make a “spaghetti” plot of average data_value over time within a state limited to only "Excellent" responses.
@@ -117,10 +120,10 @@ brfss_ny = brfss %>%
   select(year, data_value, response, locationdesc, locationabbr) %>% 
   filter(year == c(2006, 2010), locationabbr == "NY")
   
-brfss_ny_plot = ggplot(data = brfss_ny, aes(x = response, y = data_value)) +
+brfss_ny_plot = ggplot(data = brfss_ny, aes(x = response, y = data_value, color = response)) +
   geom_boxplot() +
   facet_wrap(~year) + 
-  labs(title = "Average Data value for Responses in NY", x = "Response", y = "Average Data")
+  labs(title = "Average Data value for Responses in NY", x = "Response", y = "Average Data", color = "Response")
 ```
 
 ## Q3: Accelerometers 
