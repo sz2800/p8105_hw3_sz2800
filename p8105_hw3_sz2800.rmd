@@ -1,7 +1,7 @@
 ---
 title: "p8105_hw3_sz2800.Rmd"
 author: "Stephanie Zhen"
-date: "10/8/2019"
+date: "10/14/2019"
 output: github_document
 ---
 
@@ -16,18 +16,21 @@ library (p8105.datasets)
 ```
 
 ## Q1: Instacart
-How many aisles are there, and which aisles are the most items ordered from?
 ```{r}
 data("instacart")
+```
 
+The dimension of instacart is `r dim(instacart)` with `r nrow(instacart)` observations and the following key variables: `r colnames(instacart)`.
+
+```{r}
 count = instacart %>%
   group_by(aisle)%>% 
   summarize(aisle_count = n()) %>% 
   arrange(desc(aisle_count))
 ```
-Based on the instacart data, there are 134 types of aisles with "fresh vegetable" being the most popular aisles with a 150609 aisles. 
+Based on the instacart data, there are `r nrow(count)` types of aisles with `r first(pull(count, aisle))` being the most popular aisles with `r max(pull(count, aisle_count))` aisles. 
 
-Make a plot that shows the number of items ordered in each aisle, limiting this to aisles with more than 10000 items ordered. Arrange aisles sensibly, and organize your plot so others can read it.
+Plot with number of items ordered in each aisle, limiting to aisles with more than 10000 items ordered.
 ```{r}
 items_aisles = count %>% 
   filter(aisle_count > 10000)
@@ -37,43 +40,43 @@ items_aisles_plot = ggplot(data = items_aisles, aes(x = reorder(aisle, aisle_cou
   labs(x = "Aisle", y = "Number of Times", title = "Distribution of Aisle") +
   coord_flip() 
 ```
+There is `r nrow(items_aisles)` aisles that has more than 10000 items ordered with the least amount of orders from `r last(pull(items_aisles, aisle))` with `r min(pull(items_aisles, aisle_count))` orders and the largest number of orders from `r first(pull(items_aisles, aisle))`, a total of `r max(pull(items_aisles, aisle_count))` orders.
 
-Make a table showing the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”. Include the number of times each item is ordered in your table.
+Table with the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”.
 ```{r}
 aisles_tables = instacart %>% 
   select(aisle, product_name) %>% 
-  filter(aisle == c("baking ingredients", "dog food care", "packaged vegetables fruits")) %>% 
+  filter(aisle %in% c("baking ingredients", "dog food care", "packaged vegetables fruits")) %>% 
   group_by(aisle, product_name) %>% 
   summarize(pop_count = n()) %>% 
   top_n(3)
 ```
 
-Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week; format this table for human readers (i.e. produce a 2 x 7 table)
+Table with mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week.
 ```{r}
 sweets = instacart %>% 
   select(product_name, order_dow, order_hour_of_day) %>% 
-  filter(product_name == c("Pink Lady Apples", "Coffee Ice Cream")) %>%
+  filter(product_name %in% c("Pink Lady Apples", "Coffee Ice Cream")) %>%
   group_by (product_name, order_dow) %>% 
   summarize(mean_time = mean(order_hour_of_day)) %>%
   pivot_wider(
     names_from = order_dow,
     values_from = mean_time
-  )
+  ) 
+
+knitr::kable(sweets, digits = 2)
 ```
+Assumed, Sunday is equivalent to zero, and Monday - Saturday follws sequentially.
 
 ## Q2 BRFSS
-Data cleaning:
-format the data to use appropriate variable names;
-focus on the “Overall Health” topic;
-include only responses from “Excellent” to “Poor”;
-organize responses as a factor taking levels ordered from “Poor” to “Excellent”;
+Data cleaning:“Overall Health” topic with ordered responses from “Excellent” to “Poor”.
 ```{r}
 data(brfss_smart2010)
 
 brfss = brfss_smart2010 %>% 
   janitor::clean_names() %>% 
   filter(topic == "Overall Health") %>% 
-  filter(response == c("Excellent", "Very good", "Good", "Fair", "Poor")) %>%
+  filter(response %in% c("Excellent", "Very good", "Good", "Fair", "Poor")) %>%
   mutate(response = as.factor(response)) %>% 
   mutate(response = forcats::fct_relevel(response, c("Poor", "Fair", "Good", "Very good", "Excellent"))) %>% 
   arrange(response)
@@ -81,20 +84,21 @@ brfss = brfss_smart2010 %>%
 
 In 2002, which states were observed at 7 or more locations? What about in 2010?
 ```{r}
-state_loca_07 = brfss %>% 
-  filter (year == 2007) %>% 
-  group_by (year, locationabbr) %>% 
+state_loca_02 = brfss %>% 
+  filter (year == 2002) %>% 
+  group_by (locationabbr) %>% 
   summarize(distinct_loca = n_distinct(locationdesc)) %>%
   filter (distinct_loca >= 7) 
 
 state_loca_10 = brfss %>% 
   filter (year == 2010) %>% 
-  group_by (year, locationabbr) %>% 
+  group_by (locationabbr) %>% 
   summarize(distinct_loca = n_distinct(locationdesc)) %>%
   filter (distinct_loca >= 7) 
 ```
+The states that were observed at 7 or more locations are: `r pull(state_loca_02,locationabbr)`. The states that are observed at 7 or more locations at 2010 are:  `r pull(state_loca_10,locationabbr)`.
 
-Construct a dataset that is limited to Excellent responses, and contains, year, state, and a variable that averages the data_value across locations within a state. Make a “spaghetti” plot of this average value over time within a state (that is, make a plot showing a line for each state across years – the geom_line geometry and group aesthetic will help).
+Make a “spaghetti” plot of average data_value over time within a state limited to only "Excellent" responses.
 ```{r}
 brfss_preplot = brfss %>% 
   select(year, response, locationabbr, data_value) %>% 
@@ -103,7 +107,8 @@ brfss_preplot = brfss %>%
   summarize(mean_data = mean(data_value, na.rm = TRUE))
 
 brfss_plot = ggplot(data = brfss_preplot, aes(x = year, y = mean_data, color = locationabbr)) + 
-    geom_line()
+    geom_line() +
+  labs(title = "Average Data value Over Time within a State", x = "Years", y = "Average Data", color = "States")
 ```
 
 Make a two-panel plot showing, for the years 2006, and 2010, distribution of data_value for responses (“Poor” to “Excellent”) among locations in NY State.
@@ -114,15 +119,17 @@ brfss_ny = brfss %>%
   
 brfss_ny_plot = ggplot(data = brfss_ny, aes(x = response, y = data_value)) +
   geom_boxplot() +
-  facet_wrap(~year)
+  facet_wrap(~year) + 
+  labs(title = "Average Data value for Responses in NY", x = "Response", y = "Average Data")
 ```
 
 ## Q3: Accelerometers 
 
-Load, tidy, and otherwise wrangle the data. Your final dataset should include all originally observed variables and values; have useful variable names; include a weekday vs weekend variable; and encode data with reasonable variable classes. Describe the resulting dataset (e.g. what variables exist, how many observations, etc).
+Tidying Accel Dataset.
 ```{r}
 accel = read_csv("./accel_data.csv") %>%
   janitor::clean_names() %>% 
+  mutate(day_week = ifelse(day %in% c("Saturday", "Sunday"), "weekend", "weekday")) %>% 
   pivot_longer(
     activity_1:activity_1440,
     names_to = "time_mins",
@@ -132,18 +139,25 @@ accel = read_csv("./accel_data.csv") %>%
   mutate(time_mins = as.numeric(time_mins))
 ```
 
-Traditional analyses of accelerometer data focus on the total activity over the day. Using your tidied dataset, aggregate accross minutes to create a total activity variable for each day, and create a table showing these totals. Are any trends apparent?
+Aggregate accross minutes to create a total activity variable for each day. 
 ```{r}
 accel_sum_table = accel %>% 
-  group_by(day_id) %>% 
+  group_by(day, day_id) %>% 
   summarize(total_act = sum(activity), avg_act = mean(activity))
 
 accel_sum_plot_1 = ggplot(accel_sum_table, aes(x = day_id, y = total_act)) +
   geom_line()
 
-accel_sum_plot_2 = ggplot(accel_sum_table, aes(x = day_id, y = avg_act)) +
-  geom_line()
-
+knitr::kable(accel_sum_table, digits = 2)
 ```
 
+There is no trend between total activity and days. There is no uniform decrease or uniform increase in the activities as the days passes. 
 
+Plot of daily activities across days of the week. 
+```{r}
+accel_sum_plot_2 = ggplot(accel_sum_table, aes(x = day_id, y = total_act, color = day)) +
+  geom_smooth() +
+  labs(x = "Day", y = "Total Activity", title = "Daily Activity across 35 Days", color = "Day of the Week")
+```
+
+There is no general trend in the activity as the days increase, and there is no uniform increase of decrease in activity between the different days of the week. 
