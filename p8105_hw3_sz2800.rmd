@@ -20,7 +20,7 @@ library (p8105.datasets)
 data("instacart")
 ```
 
-The dimension of instacart is `r dim(instacart)` with `r nrow(instacart)` observations and the following key variables: `r colnames(instacart)`.
+Instacart is an online grocery service that allows people to shop online from local stores. The dimension of instacart dataset is `r dim(instacart)` with `r nrow(instacart)` observations and the following key variables: `r colnames(instacart)`. The fifth order of the dataset is "Lightly Smoked Sardines in Olive Oil", in the aisle: Canned Meat and Seafoods.
 
 ```{r}
 count = instacart %>%
@@ -50,6 +50,11 @@ aisles_tables = instacart %>%
   group_by(aisle, product_name) %>% 
   summarize(pop_count = n()) %>% 
   top_n(3)
+
+knitr::kable(aisles_tables,
+             format = "html",
+             digits = 0,
+             caption = "Three most popular items from baking ingredients, dog food care, packaged vegetables fruits")
 ```
 
 Table with mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week.
@@ -64,9 +69,12 @@ sweets = instacart %>%
     values_from = mean_time
   ) 
 
-knitr::kable(sweets, digits = 2)
+knitr::kable(sweets, 
+             format = "html",
+             digits = 2,
+             caption = "Average order time for Pink Lady Apples and Coffee Ice Cream")
 ```
-Assumed, Sunday is equivalent to zero, and Monday - Saturday follws sequentially.
+Assumed, Sunday is equivalent to zero, and Monday - Saturday follows sequentially.
 
 ## Q2 BRFSS
 Data cleaning:“Overall Health” topic with ordered responses from “Excellent” to “Poor”.
@@ -89,14 +97,20 @@ state_loca_02 = brfss %>%
   group_by (locationabbr) %>% 
   summarize(distinct_loca = n_distinct(locationdesc)) %>%
   filter (distinct_loca >= 7) 
-knitr::kable(state_loca_02, digits = 1)
+knitr::kable(state_loca_02, 
+             format = "html",
+             digits = 0,
+             caption = "States Observed at 7 more locations in 2002")
 
 state_loca_10 = brfss %>% 
   filter (year == 2010) %>% 
   group_by (locationabbr) %>% 
   summarize(distinct_loca = n_distinct(locationdesc)) %>%
   filter (distinct_loca >= 7) 
-knitr::kable(state_loca_10, digits = 1)
+knitr::kable(state_loca_10, 
+             format = "html",
+             digits = 0,
+             caption = "States Observed at 7 more locations in 2010")
 ```
 
 The states that were observed at 7 or more locations are: `r pull(state_loca_02,locationabbr)`. The states that are observed at 7 or more locations at 2010 are:  `r pull(state_loca_10,locationabbr)`.
@@ -114,7 +128,7 @@ brfss_plot = ggplot(data = brfss_preplot, aes(x = year, y = mean_data, color = l
   labs(title = "Average Data value Over Time within a State", x = "Years", y = "Average Data", color = "States")
 ```
 
-Make a two-panel plot showing, for the years 2006, and 2010, distribution of data_value for responses (“Poor” to “Excellent”) among locations in NY State.
+A two-panel plot for the years 2006, and 2010, showing distribution of data_value for responses (“Poor” to “Excellent”) among locations in NY State.
 ```{r}
 brfss_ny = brfss %>% 
   select(year, data_value, response, locationdesc, locationabbr) %>% 
@@ -130,17 +144,21 @@ brfss_ny_plot = ggplot(data = brfss_ny, aes(x = response, y = data_value, color 
 
 Tidying Accel Dataset.
 ```{r}
-accel = read_csv("./accel_data.csv") %>%
+accel = read_csv("./data/accel_data.csv") %>%
   janitor::clean_names() %>% 
-  mutate(day_week = ifelse(day %in% c("Saturday", "Sunday"), "weekend", "weekday")) %>% 
   pivot_longer(
     activity_1:activity_1440,
     names_to = "time_mins",
     names_prefix = "activity_",
     values_to = "activity"
   ) %>%
-  mutate(time_mins = as.numeric(time_mins))
+  mutate(time_hour = ceiling(as.numeric(time_mins)/60)) %>% 
+  mutate(day_week = ifelse(day %in% c("Saturday", "Sunday"), "weekend", "weekday")) %>% 
+  mutate(day = as.factor(day), 
+         day = forcats::fct_relevel(day, c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")))
 ```
+
+In the accel dataset, the key variables are: `r colnames(accel)` with `r nrow(accel)` observations. Each observation is the activity per minute over the course of 5 weeks, of a 63 year old male, with BMI 25, diagnosed with congested heart failure. 
 
 Aggregate accross minutes to create a total activity variable for each day. 
 ```{r}
@@ -151,16 +169,23 @@ accel_sum_table = accel %>%
 accel_sum_plot_1 = ggplot(accel_sum_table, aes(x = day_id, y = total_act)) +
   geom_line()
 
-knitr::kable(accel_sum_table, digits = 2)
+knitr::kable(accel_sum_table, 
+            format = "html",
+             digits = 2)
 ```
 
 There is no trend between total activity and days. There is no uniform decrease or uniform increase in the activities as the days passes. 
 
 Plot of daily activities across days of the week. 
 ```{r}
-accel_sum_plot_2 = ggplot(accel_sum_table, aes(x = day_id, y = total_act, color = day)) +
+accel_sum_hour = accel %>% 
+  group_by(day, time_hour) %>% 
+  summarize(total_act = sum(activity, na.rm = TRUE), avg_act = mean(activity,  na.rm = TRUE))
+
+accel_sum_plot_2 = ggplot(accel_sum_hour, aes(x = time_hour, y = total_act, color = day)) +
   geom_smooth() +
-  labs(x = "Day", y = "Total Activity", title = "Daily Activity across 35 Days", color = "Day of the Week")
+  labs(x = "Time (Hours)", y = "Total Activity", title = "Daily Activity across Days of the Weeks", color = "Day of the Week") +
+  xlim(1, 24)
 ```
 
-There is no general trend in the activity as the days increase, and there is no uniform increase of decrease in activity between the different days of the week. 
+Based on the graph, it looks like Sunday shows the largest differences in activity. In general, activity increase from 1-10 hours then plateaus and decreases by the 20th hour. 
